@@ -1,0 +1,9 @@
+# Ігнорування бінарників та завантажених провайдерів Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Ігнорування секретів Infracost, які ми створювали раніше
+infracost-base.json
+infracost-diff.json
