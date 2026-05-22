@@ -1,21 +1,50 @@
-name: Infracost Scan
+name: Infracost Scan & Commit
 
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write # Необхідно для того, щоб бот міг робити push у репозиторій
 
 jobs:
-  infracost-scan:
+  infracost-audit:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Завантажує повну історію для коректного коміту
 
-      - name: Run Infracost Scan
-        uses: infracost/actions/scan@a1f1aab438c2d0e642e7cd596a1c8750c7c75a5e
+      # 1. Встановлюємо актуальний Infracost CLI
+      - name: Setup Infracost
+        uses: infracost/actions-setup@v3
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
-          path: .
+
+      # 2. Генеруємо фінансовий звіт у форматі JSON (або markdown)
+      - name: Generate Cost Report
+        run: |
+          infracost breakdown --path . \
+                              --format json \
+                              --out-file infracost-report.json
+
+      # 3. Автоматичний коміт файлу звіту назад у репозиторій
+      - name: Commit and Push Report
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Додаємо файл до індексу
+          git add infracost-report.json
+          
+          # Перевіряємо, чи є реальні зміни у вартості, щоб не плодити пусті коміти
+          if git diff --staged --quiet; then
+            echo "No changes in cost report. Skipping commit."
+          else
+            git commit -m "chore: update infracost budget report [skip ci]"
+            git push origin main
+          
+            # Примітка: [skip ci] у повідомленні коміту потрібен для того, 
+            # щоб цей автокоміт не запустив цей же пайплайн по колу.
+          fi
