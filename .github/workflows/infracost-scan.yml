@@ -1,41 +1,21 @@
-name: Infracost Cost Estimate
+name: Infracost Scan
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  infracost:
-    name: Infracost Analysis
+  infracost-scan:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # Встановлюємо правильний та актуальний CLI
-      - name: Setup Infracost
-        uses: infracost/actions/setup@v3
+      - name: Run Infracost Scan
+        uses: infracost/actions/scan@a1f1aab438c2d0e642e7cd596a1c8750c7c75a5e
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
-
-      # Генеруємо звіт вартості для GKE Terraform коду
-      - name: Generate Infracost breakdown
-        run: |
-          infracost breakdown --path . \
-                              --format json \
-                              --out-file /tmp/infracost.json
-
-      # Якщо це Pull Request — бот виведе коментар із ціною
-      - name: Post Infracost comment
-        if: github.event_name == 'pull_request'
-        uses: infracost/actions/comment@v3
-        with:
-          path: /tmp/infracost.json
-          behavior: update
+          path: .
